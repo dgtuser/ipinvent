@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IP Invent</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <section id="authScreen" class="auth-screen">
+        <div class="auth-preview">
+          <p class="kicker">Enterprise IPAM</p>
+          <h1>Инвентаризация IP-адресов с пользователями и базой данных</h1>
+          <p class="lead">
+            Храните IP-адреса, группы, локации и сетевые параметры в SQLite,
+            управляйте доступом через роли и работайте в темном интерфейсе,
+            вдохновленном IPAM-панелями.
+          </p>
+
+          <div class="preview-grid">
+            <article class="preview-card">
+              <span class="preview-label">Хранилище</span>
+              <strong>SQLite</strong>
+              <p>простая локальная БД без внешних зависимостей</p>
+            </article>
+            <article class="preview-card">
+              <span class="preview-label">Доступ</span>
+              <strong>Admin / Operator / Viewer</strong>
+              <p>роли для управления пользователями и записями</p>
+            </article>
+            <article class="preview-card">
+              <span class="preview-label">Импорт</span>
+              <strong>CSV + ручное редактирование</strong>
+              <p>быстрый ввод данных и мгновенный поиск</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="auth-card">
+          <div class="brand-block">
+            <div class="brand-mark">IP</div>
+            <div>
+              <p class="kicker">IP Invent</p>
+              <h2 id="authTitle">Вход в систему</h2>
+            </div>
+          </div>
+
+          <p id="authSubtitle" class="auth-subtitle">
+            Авторизуйтесь, чтобы открыть реестр IP-адресов.
+          </p>
+
+          <form id="loginForm" class="auth-form">
+            <label class="field">
+              <span>Логин</span>
+              <input name="username" type="text" autocomplete="username" required />
+            </label>
+            <label class="field">
+              <span>Пароль</span>
+              <input
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+            </label>
+            <button class="button button-primary auth-submit" type="submit">
+              Войти
+            </button>
+          </form>
+
+          <form id="setupForm" class="auth-form hidden">
+            <label class="field">
+              <span>Логин администратора</span>
+              <input name="username" type="text" autocomplete="username" required />
+            </label>
+            <label class="field">
+              <span>Имя администратора</span>
+              <input name="displayName" type="text" required />
+            </label>
+            <label class="field">
+              <span>Пароль</span>
+              <input
+                name="password"
+                type="password"
+                autocomplete="new-password"
+                required
+              />
+            </label>
+            <label class="field">
+              <span>Повтор пароля</span>
+              <input name="passwordConfirm" type="password" required />
+            </label>
+            <button class="button button-primary auth-submit" type="submit">
+              Создать администратора
+            </button>
+          </form>
+
+          <div id="authHint" class="auth-hint">
+            После первого входа можно будет создавать других пользователей и
+            управлять их ролями.
+          </div>
+        </div>
+      </section>
+
+      <section id="appScreen" class="app-screen hidden">
+        <aside class="sidebar">
+          <div class="sidebar-top">
+            <div class="brand-mark brand-mark-small">IP</div>
+            <div>
+              <p class="sidebar-kicker">Connected inventory</p>
+              <h2>IP Invent</h2>
+            </div>
+          </div>
+
+          <nav class="nav-list">
+            <button class="nav-button active" data-view="inventory" type="button">
+              IP-адреса
+            </button>
+            <button class="nav-button" data-view="groups" type="button">
+              Группы
+            </button>
+            <button class="nav-button admin-only" data-view="users" type="button">
+              Пользователи
+            </button>
+            <button class="nav-button" data-view="activity" type="button">
+              Активность
+            </button>
+          </nav>
+
+          <div class="sidebar-card">
+            <p class="sidebar-kicker">Сессия</p>
+            <strong id="currentUserName">—</strong>
+            <p id="currentUserRole" class="sidebar-meta">—</p>
+          </div>
+
+          <div class="sidebar-card">
+            <p class="sidebar-kicker">Шаблон загрузки</p>
+            <a class="sidebar-link" href="./ip-inventory-template.csv" download>
+              Скачать CSV шаблон
+            </a>
+          </div>
+        </aside>
+
+        <main class="workspace">
+          <header class="topbar">
+            <div>
+              <p id="viewCaption" class="kicker">IP address management</p>
+              <h1 id="viewTitle">Реестр IP-адресов</h1>
+            </div>
+
+            <div class="topbar-actions">
+              <button id="openRecordButton" class="button button-primary" type="button">
+                Добавить IP
+              </button>
+              <button
+                id="openUserButton"
+                class="button button-secondary admin-only"
+                type="button"
+              >
+                Новый пользователь
+              </button>
+              <button id="logoutButton" class="button button-ghost" type="button">
+                Выход
+              </button>
+            </div>
+          </header>
+
+          <section id="inventoryView" class="view-section">
+            <div class="stats-grid">
+              <article class="metric-card">
+                <span class="metric-label">Всего IP</span>
+                <strong id="statTotal">0</strong>
+                <p>в базе данных</p>
+              </article>
+              <article class="metric-card">
+                <span class="metric-label">Групп</span>
+                <strong id="statGroups">0</strong>
+                <p>сетевых сегментов</p>
+              </article>
+              <article class="metric-card">
+                <span class="metric-label">Требуют аудита</span>
+                <strong id="statAudit">0</strong>
+                <p>без свежей проверки</p>
+              </article>
+              <article class="metric-card">
+                <span class="metric-label">Активных пользователей</span>
+                <strong id="statUsers">0</strong>
+                <p>авторизованный доступ</p>
+              </article>
+            </div>
+
+            <section class="panel filters-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="kicker">Поиск и фильтрация</p>
+                  <h3>Фильтры реестра</h3>
+                </div>
+
+                <div class="panel-actions">
+                  <button id="importButton" class="button button-secondary" type="button">
+                    Импорт CSV
+                  </button>
+                  <button id="exportButton" class="button button-ghost" type="button">
+                    Экспорт CSV
+                  </button>
+                </div>
+              </div>
+
+              <div class="filter-grid">
+                <label class="field field-search">
+                  <span>Поиск</span>
+                  <input
+                    id="searchInput"
+                    type="search"
+                    placeholder="IP, hostname, DNS, владелец, описание..."
+                  />
+                </label>
+                <label class="field">
+                  <span>Группа</span>
+                  <select id="groupFilter"></select>
+                </label>
+                <label class="field">
+                  <span>Статус</span>
+                  <select id="statusFilter"></select>
+                </label>
+                <label class="field">
+                  <span>Среда</span>
+                  <select id="environmentFilter"></select>
+                </label>
+              </div>
+
+              <div class="filter-footer">
+                <button id="clearFiltersButton" class="button button-ghost" type="button">
+                  Сбросить фильтры
+                </button>
+                <div id="resultCounter" class="result-chip">0 результатов</div>
+              </div>
+            </section>
+
+            <section class="panel table-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="kicker">IP address register</p>
+                  <h3>Текущие записи</h3>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table class="inventory-table">
+                  <thead>
+                    <tr>
+                      <th><button class="sort-button" data-sort="ipAddress">IP-адрес</button></th>
+                      <th><button class="sort-button" data-sort="group">Группа</button></th>
+                      <th><button class="sort-button" data-sort="status">Статус</button></th>
+                      <th>Тип</th>
+                      <th><button class="sort-button" data-sort="hostname">Hostname</button></th>
+                      <th>DNS-имя</th>
+                      <th>Владелец</th>
+                      <th><button class="sort-button" data-sort="location">Локация</button></th>
+                      <th><button class="sort-button" data-sort="lastAudit">Аудит</button></th>
+                      <th>Описание</th>
+                      <th>Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recordsTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <section id="groupsView" class="view-section hidden">
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="kicker">Grouping</p>
+                  <h3>Сетевые группы</h3>
+                </div>
+              </div>
+
+              <form id="groupForm" class="stack-form">
+                <div class="split-fields">
+                  <label class="field">
+                    <span>Название группы</span>
+                    <input id="groupNameInput" type="text" required />
+                  </label>
+                  <label class="field">
+                    <span>Описание</span>
+                    <input id="groupDescriptionInput" type="text" />
+                  </label>
+                </div>
+                <button class="button button-primary editor-only" type="submit">
+                  Добавить группу
+                </button>
+              </form>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="kicker">Segments</p>
+                  <h3>Список групп</h3>
+                </div>
+              </div>
+              <div id="groupList" class="group-grid"></div>
+            </section>
+          </section>
+
+          <section id="usersView" class="view-section hidden">
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="kicker">Access control</p>
+                  <h3>Пользователи системы</h3>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="inventory-table compact-table">
+                  <thead>
+                    <tr>
+                      <th>Логин</th>
+                      <th>Имя</th>
+                      <th>Роль</th>
+                      <th>Статус</th>
+                      <th>Последний вход</th>
+                      <th>Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody id="usersTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <section id="activityView" class="view-section hidden">
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="kicker">Audit trail</p>
+                  <h3>Последняя активность</h3>
+                </div>
+              </div>
+              <div id="activityList" class="activity-list"></div>
+            </section>
+          </section>
+        </main>
+      </section>
+    </div>
+
+    <input id="csvInput" type="file" accept=".csv,text/csv" hidden />
+
+    <div id="recordModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close-modal="record"></div>
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <p class="kicker">IP editor</p>
+            <h3 id="recordModalTitle">Новая запись</h3>
+          </div>
+          <button id="closeRecordModalButton" class="icon-button" type="button">×</button>
+        </div>
+
+        <form id="recordForm" class="modal-form">
+          <input name="id" type="hidden" />
+          <div class="modal-grid">
+            <label class="field">
+              <span>IP-адрес</span>
+              <input name="ipAddress" type="text" required />
+            </label>
+            <label class="field">
+              <span>Hostname</span>
+              <input name="hostname" type="text" />
+            </label>
+            <label class="field">
+              <span>Группа</span>
+              <input name="group" list="groupsDatalist" type="text" />
+            </label>
+            <label class="field">
+              <span>Статус</span>
+              <input name="status" list="statusOptions" type="text" />
+            </label>
+            <label class="field">
+              <span>Тип устройства</span>
+              <input name="deviceType" list="deviceOptions" type="text" />
+            </label>
+            <label class="field">
+              <span>Среда</span>
+              <input name="environment" list="environmentOptions" type="text" />
+            </label>
+            <label class="field">
+              <span>Подсеть / CIDR</span>
+              <input name="subnet" type="text" />
+            </label>
+            <label class="field">
+              <span>VLAN</span>
+              <input name="vlan" type="text" />
+            </label>
+            <label class="field">
+              <span>Шлюз</span>
+              <input name="gateway" type="text" />
+            </label>
+            <label class="field">
+              <span>MAC-адрес</span>
+              <input name="macAddress" type="text" />
+            </label>
+            <label class="field">
+              <span>DNS / FQDN</span>
+              <input name="dnsName" type="text" />
+            </label>
+            <label class="field">
+              <span>Локация</span>
+              <input name="location" type="text" />
+            </label>
+            <label class="field">
+              <span>Владелец</span>
+              <input name="owner" type="text" />
+            </label>
+            <label class="field">
+              <span>Дата назначения</span>
+              <input name="assignedAt" type="date" />
+            </label>
+            <label class="field">
+              <span>Последний аудит</span>
+              <input name="lastAudit" type="date" />
+            </label>
+            <label class="field field-wide">
+              <span>Теги</span>
+              <input name="tags" type="text" placeholder="core, wifi, printer" />
+            </label>
+            <label class="field field-wide">
+              <span>Описание</span>
+              <textarea name="description" rows="3"></textarea>
+            </label>
+            <label class="field field-wide">
+              <span>Заметки</span>
+              <textarea name="notes" rows="3"></textarea>
+            </label>
+          </div>
+
+          <div class="modal-actions">
+            <button class="button button-primary" type="submit">Сохранить</button>
+            <button id="cancelRecordModalButton" class="button button-ghost" type="button">
+              Отмена
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="userModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close-modal="user"></div>
+      <div class="modal-card modal-card-small">
+        <div class="modal-header">
+          <div>
+            <p class="kicker">User access</p>
+            <h3 id="userModalTitle">Новый пользователь</h3>
+          </div>
+          <button id="closeUserModalButton" class="icon-button" type="button">×</button>
+        </div>
+
+        <form id="userForm" class="modal-form">
+          <input name="id" type="hidden" />
+          <label class="field">
+            <span>Логин</span>
+            <input id="userUsernameInput" name="username" type="text" required />
+          </label>
+          <label class="field">
+            <span>Имя</span>
+            <input name="displayName" type="text" required />
+          </label>
+          <label class="field">
+            <span>Роль</span>
+            <select name="role">
+              <option value="admin">Admin</option>
+              <option value="operator">Operator</option>
+              <option value="viewer">Viewer</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Пароль</span>
+            <input
+              id="userPasswordInput"
+              name="password"
+              type="password"
+              placeholder="Для редактирования оставьте пустым"
+            />
+          </label>
+          <label class="toggle">
+            <input id="userActiveInput" name="isActive" type="checkbox" checked />
+            <span>Пользователь активен</span>
+          </label>
+
+          <div class="modal-actions">
+            <button class="button button-primary" type="submit">Сохранить</button>
+            <button id="cancelUserModalButton" class="button button-ghost" type="button">
+              Отмена
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <datalist id="groupsDatalist"></datalist>
+    <datalist id="statusOptions">
+      <option value="Active"></option>
+      <option value="Reserved"></option>
+      <option value="Maintenance"></option>
+      <option value="Offline"></option>
+    </datalist>
+    <datalist id="environmentOptions">
+      <option value="Production"></option>
+      <option value="Staging"></option>
+      <option value="Lab"></option>
+      <option value="Office"></option>
+    </datalist>
+    <datalist id="deviceOptions">
+      <option value="Router"></option>
+      <option value="Switch"></option>
+      <option value="Server"></option>
+      <option value="Firewall"></option>
+      <option value="Workstation"></option>
+      <option value="Printer"></option>
+      <option value="Access Point"></option>
+      <option value="Camera"></option>
+      <option value="IoT"></option>
+    </datalist>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
